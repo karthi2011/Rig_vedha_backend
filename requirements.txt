@@ -6,7 +6,6 @@ annotated-types==0.7.0
 anyascii==0.3.2
 anyio==4.5.2
 async-timeout==4.0.3
-faiss-cpu==1.9.0.post1
 attrs==24.3.0
 blinker==1.8.2
 cachetools==5.5.1
@@ -139,5 +138,13 @@ Werkzeug==3.0.6
 wsproto==1.2.0
 yarl==1.15.2
 zipp==3.20.2
+setuptools>=68.0.0
+wheel
+build
+flask
+gunicorn
+waitress
+requests
+
 
 
