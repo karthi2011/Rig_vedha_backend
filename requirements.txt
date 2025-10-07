@@ -87,7 +87,6 @@ psutil==6.1.1
 py-cpuinfo==9.0.0
 pyahocorasick==2.1.0
 pyarrow==17.0.0
-PyAudio==0.2.14
 pycparser==2.22
 pydantic==2.10.6
 pydantic_core==2.27.2
@@ -146,5 +145,6 @@ Werkzeug==3.0.6
 wsproto==1.2.0
 yarl==1.15.2
 zipp==3.20.2
+
 
 
