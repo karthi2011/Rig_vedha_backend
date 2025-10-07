@@ -112,7 +112,7 @@ def chat():
     
     try:
         # Use direct Gemini API instead of LangChain
-        model = genai.GenerativeModel('gemini-1.5-flash')  # Lighter model
+        model = genai.GenerativeModel('gemini-1.0-pro')  # Lighter model
         
         prompt = f"You are an expert on Rig Vedha. Answer this question clearly and concisely: {message}. Only answer Rig Vedha related questions."
         
