@@ -1,6 +1,7 @@
 from flask import Flask, send_file, request, jsonify
 from flask_cors import CORS
 import os
+import gc
 import json
 from dotenv import load_dotenv
 
@@ -55,13 +56,13 @@ def generate_quiz():
         "Each question must have 4 options and specify the correct answer index (0-3). "
         "Return the result as pure JSON array with objects having fields: q, options with words, answer_index."
     )
-
-    chain = LLMChain(llm=llm, prompt=prompt)
-    response = chain.run(count=count)
-    print(type(response))
-    #print(response)
-    response=response.strip("`json").rstrip('```')
-    print(response)
+    try:
+        chain = LLMChain(llm=llm, prompt=prompt)
+        response = chain.run(count=count)
+    
+        response=response.strip("`json").rstrip('```')
+    finally:
+        gc.collect()
     try:
         quiz = json.loads(response.strip())
         print(quiz)
@@ -83,9 +84,6 @@ def submit_quiz():
     answers = payload.get("answers", [])
     questions = payload.get("questions", [])
 
-    print(name)
-    print("Answer",answers)
-    print(questions)
     score = 0
     for i, q in enumerate(questions):
         correct = q.get("answer_index")
@@ -95,8 +93,6 @@ def submit_quiz():
 
     result = {"name": name, "score": score, "total": len(questions)}
 
-    print("RESTULTs",result)
-    # Save to file
     with open(RESULTS_FILE, "r+") as f:
         data = json.load(f)
         data.append(result)
@@ -115,12 +111,13 @@ def chat():
     message = payload.get("message", "")
     if not GEMINI_KEY:
         return jsonify({"reply": "Gemini API key not found."}), 400
-
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_KEY)
-    prompt = PromptTemplate.from_template("You are an expert on Rig Vedha. Answer clearly: {question}. Only answer for Rig vedha related question")
-    chain = LLMChain(llm=llm, prompt=prompt)
-    response = chain.run(question=message)
-
+    try:
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_KEY)
+        prompt = PromptTemplate.from_template("You are an expert on Rig Vedha. Answer clearly: {question}. Only answer for Rig vedha related question")
+        chain = LLMChain(llm=llm, prompt=prompt)
+        response = chain.run(question=message)
+    finally:
+        gc.collect()
     return jsonify({"reply": response})
 
 if __name__ == "__main__":
