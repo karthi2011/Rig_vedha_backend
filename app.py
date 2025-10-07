@@ -4,22 +4,18 @@ import os
 import gc
 import json
 from dotenv import load_dotenv
-
+import google.generativeai as genai
 
 # --- Load environment variables ---
 load_dotenv()
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 
-
-# --- LangChain Imports ---
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
-from langchain.chains import LLMChain
-
-
+# Configure Gemini
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
 
 app = Flask(__name__)
-CORS(app)#, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(BASE_DIR)
@@ -32,14 +28,9 @@ if not os.path.exists(RESULTS_FILE):
     with open(RESULTS_FILE, "w") as f:
         json.dump([], f)
 
-
-
 @app.route("/api/pdf")
 def serve_pdf():
-# Serve the PDF file for the frontend to embed
     return send_file(PDF_PATH, "rigvedha.pdf")
-
-
 
 @app.route("/api/quiz/generate", methods=["POST"])
 def generate_quiz():
@@ -49,36 +40,47 @@ def generate_quiz():
     if not GEMINI_KEY:
         return jsonify({"error": "Gemini API key not set"}), 400
 
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_KEY)
-
-    prompt = PromptTemplate.from_template(
-        "Generate {count} different multiple choice questions about Rig Vedha. "
-        "Each question must have 4 options and specify the correct answer index (0-3). "
-        "Return the result as pure JSON array with objects having fields: q, options with words, answer_index."
-    )
     try:
-        chain = LLMChain(llm=llm, prompt=prompt)
-        response = chain.run(count=count)
+        # Use direct Gemini API instead of LangChain
+        model = genai.GenerativeModel('gemini-1.5-flash')  # Lighter model
+        
+        prompt = f"""
+        Generate {count} different multiple choice questions about Rig Vedha.
+        Each question must have 4 options and specify the correct answer index (0-3).
+        Return the result as pure JSON array with objects having fields: q, options, answer_index.
+        
+        Example format:
+        [
+            {{
+                "q": "What is Rig Vedha?",
+                "options": ["Ancient text", "Modern book", "Movie", "Song"],
+                "answer_index": 0
+            }}
+        ]
+        """
+        
+        response = model.generate_content(prompt)
+        response_text = response.text.strip().strip("`").strip("json").strip()
+        
+        quiz = json.loads(response_text)
+        print(quiz)
+        
+    except Exception as e:
+        print(f"Error generating quiz: {e}")
+        # Fallback questions
+        quiz = [
+            {"q": "What is Rig Vedha?", "options": ["Ancient Hindu scripture", "Modern book", "Movie", "Song"], "answer_index": 0},
+            {"q": "How many mandalas are in Rig Vedha?", "options": ["10", "7", "5", "12"], "answer_index": 0},
+            {"q": "Which language is Rig Vedha written in?", "options": ["Sanskrit", "Hindi", "Tamil", "English"], "answer_index": 0}
+        ][:count]
     
-        response=response.strip("`json").rstrip('```')
     finally:
         gc.collect()
-    try:
-        quiz = json.loads(response.strip())
-        print(quiz)
-    except Exception:
-        quiz = [
-            {"q": "What is Rig Vedha?", "options": ["A", "B", "C", "D"], "answer_index": 0}
-        ] * count
-
+    
     return jsonify(quiz)
-
-
-
 
 @app.route("/api/quiz/submit", methods=["POST"])
 def submit_quiz():
-    # Expect: {"name": "User", "answers": [0,2,1,3,0], "questions": [...]}
     payload = request.json or {}
     name = payload.get("name", "Anonymous")
     answers = payload.get("answers", [])
@@ -88,8 +90,7 @@ def submit_quiz():
     for i, q in enumerate(questions):
         correct = q.get("answer_index")
         if i < len(answers) and answers[i] == correct:
-         score += 1
-
+            score += 1
 
     result = {"name": name, "score": score, "total": len(questions)}
 
@@ -99,26 +100,37 @@ def submit_quiz():
         f.seek(0)
         json.dump(data, f, indent=2)
 
-
     return jsonify(result)
-
-
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    # Expect: {"message": "question about Rig Vedha"}
     payload = request.json or {}
     message = payload.get("message", "")
+    
     if not GEMINI_KEY:
         return jsonify({"reply": "Gemini API key not found."}), 400
+    
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_KEY)
-        prompt = PromptTemplate.from_template("You are an expert on Rig Vedha. Answer clearly: {question}. Only answer for Rig vedha related question")
-        chain = LLMChain(llm=llm, prompt=prompt)
-        response = chain.run(question=message)
+        # Use direct Gemini API instead of LangChain
+        model = genai.GenerativeModel('gemini-1.5-flash')  # Lighter model
+        
+        prompt = f"You are an expert on Rig Vedha. Answer this question clearly and concisely: {message}. Only answer Rig Vedha related questions."
+        
+        response = model.generate_content(prompt)
+        reply = response.text
+        
+    except Exception as e:
+        print(f"Chat error: {e}")
+        reply = "I'm sorry, I couldn't process your question about Rig Vedha at the moment."
+    
     finally:
         gc.collect()
-    return jsonify({"reply": response})
+    
+    return jsonify({"reply": reply})
+
+@app.route('/')
+def home():
+    return {"status": "OK", "message": "Rig Vedha Backend is running"}
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
