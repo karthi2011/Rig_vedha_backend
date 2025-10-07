@@ -1,6 +1,6 @@
 setuptools>=70.0.0
 pip>=24.0
-wheel
+wheel==0.43.0
 build
 flask
 gunicorn
@@ -146,4 +146,5 @@ Werkzeug==3.0.6
 wsproto==1.2.0
 yarl==1.15.2
 zipp==3.20.2
+
 
