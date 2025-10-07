@@ -3,6 +3,8 @@ pip>=24.0
 wheel==0.43.0
 build
 flask
+Flask
+flask-cors
 gunicorn
 waitress
 requests
@@ -145,6 +147,7 @@ Werkzeug==3.0.6
 wsproto==1.2.0
 yarl==1.15.2
 zipp==3.20.2
+
 
 
 
